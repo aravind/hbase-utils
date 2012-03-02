@@ -3,3 +3,8 @@ Fabric setup to manage a HBase cluster.
 fabfile.py - fab file to drive Fabric.
 region_mover.rb - JRuby script to manage HBase regions.
 zkclient.py - ZooKeeper script to query/edit znode paths.
+
+For more information on how these work with our setup - please take a
+look at this post.
+
+http://inchoate-clatter.blogspot.com/2012/03/hbase-ops-automation.html

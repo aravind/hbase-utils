@@ -251,8 +251,8 @@ end
 # Now get list of regions on targetServer
 def getRegions(config, servername)
   connection = HConnectionManager::getConnection(config)
-  hsa = HServerAddress.new(getHostnamePortFromServerName(servername))
-  rs = connection.getHRegionConnection(hsa)
+  parts = servername.split(',')
+  rs = connection.getHRegionConnection(parts[0], parts[1].to_i)
   return rs.getOnlineRegions()
 end
 
@@ -296,6 +296,13 @@ def readFile(filename)
   return regions
 end
 
+# Get the list of children under a znode
+def getZnodeChildren(admin, rel_path)
+  root_znode = admin.getConfiguration.get("zookeeper.znode.parent")
+  query_znode = root_znode + "/" + rel_path
+  return org.apache.hadoop.hbase.zookeeper.ZKUtil.listChildrenNoWatch(admin.getConnection().getZooKeeperWatcher(), query_znode)
+end
+
 # weight of a region is its deviation from the ideal region count.
 def getWeight(server, server_region_map, num_regions)
   regions_on_server = server_region_map[server]
@@ -313,6 +320,10 @@ def balanceRegions(options)
   admin = HBaseAdmin.new(config)
   servers = getServers(admin)
   weights = Array.new()
+  draining_servers = getZnodeChildren(admin, "draining")
+  for server in draining_servers
+    stripServer(servers, getHostnameFromServerName(server))
+  end
   server_region_map = Hash.new
   if balance_limit < 1:
       balance_limit = servers.length
@@ -359,9 +370,15 @@ def unloadRegions(options, hostname, attempt_count)
   # Get an admin instance
   admin = HBaseAdmin.new(config)
   servers = getServers(admin)
-  # Remove the server we are unloading from from list of servers.
+  # Remove the server we are unloading from list of servers.
   # Side-effect is the servername that matches this hostname
   servername = stripServer(servers, hostname)
+  draining_servers = getZnodeChildren(admin, "draining")
+  for server in draining_servers
+    if server != servername
+        stripServer(servers, getHostnameFromServerName(server))
+    end
+  end
   regions = getRegions(config, servername)
   if regions.length != 0
     weights = Array.new()
