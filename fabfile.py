@@ -110,15 +110,16 @@ def dist_release(release_dir, link_dir):
   """Rsyncs the release to the region servers.
   """
   new_rel_dir_name = os.path.basename(release_dir)
-  with settings(warn_only=True):
+  with settings(hide('warnings', 'stdout', 'stderr'),
+                warn_only=True):
     run("cp -LRp " + link_dir + " " + new_rel_dir_name)
-  rsync_project(local_dir=release_dir,
-                remote_dir=HOME_DIR,
-                extra_opts="--links",
-                delete=True)
-  rsync_project(local_dir=link_dir,
-                extra_opts="--links",
-                remote_dir=HOME_DIR)
+    rsync_project(local_dir=release_dir,
+                  remote_dir=HOME_DIR,
+                  extra_opts="--links --quiet",
+                  delete=True)
+    rsync_project(local_dir=link_dir,
+                  extra_opts="--links --quiet",
+                  remote_dir=HOME_DIR)
 
 def dist_hbase(release_dir):
   """Rsyncs the hbase release to the region servers.
