@@ -64,10 +64,10 @@ def _get_zk_servers(eltree):
     zk_client_port = 2181
   zk_servers = []
   for server in zk_ensemble.split(","):
-    zk_servers.append(server + ":" + zk_client_port)
+    zk_servers.append(server + ":" + str(zk_client_port))
   return ",".join(zk_servers)
 
-eltree = xml.etree.ElementTree.parse(HBASE_HOME + "/conf/hbase-site.xml")
+eltree = xml.etree.ElementTree.parse(HOME_DIR + "/hbase_conf/hbase-site.xml")
 root_znode = _get_xml_prop("zookeeper.znode.parent", eltree)
 zk_client = FAB_DIR + "/zkclient.py " + _get_zk_servers(eltree)
 
