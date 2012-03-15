@@ -70,6 +70,9 @@ def _get_zk_servers(eltree):
 eltree = xml.etree.ElementTree.parse(HOME_DIR + "/hbase_conf/hbase-site.xml")
 root_znode = _get_xml_prop("zookeeper.znode.parent", eltree)
 zk_client = FAB_DIR + "/zkclient.py " + _get_zk_servers(eltree)
+rs_port = _get_xml_prop("hbase.regionserver.info.port", eltree)
+if rs_port == None:
+  rs_port = 60030
 
 @hosts("localhost")
 def _zkop(op, path):
@@ -259,7 +262,7 @@ def _get_rs_status_page():
   the server is down.
   """
   try:
-    conn =  httplib.HTTPConnection(env.host_string, 61030)
+    conn =  httplib.HTTPConnection(env.host_string, rs_port)
     conn.request("GET", "/rs-status")
     response = conn.getresponse()
     data = response.read()
