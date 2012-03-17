@@ -153,6 +153,15 @@ def list_draining_nodes():
   """List all servers under the Zookeeper /draining znode"""
   print "\n".join(_zkop("get", root_znode + "/draining"))
 
+def _do(command):
+  with settings(hide('warnings', 'stdout', 'stderr'),
+                warn_only=True):
+    run(command)
+
+def do(command):
+  """Run an arbitrary command on the remote host"""
+  run(command)
+
 def clear_rs_from_draining():
   """Remove the regionserver from the draining state."""
   for node in _zkop("get", root_znode + "/draining"):
@@ -187,48 +196,34 @@ def enable_balancer():
 
 def hbase_stop():
   """Stop hbase (WARNING: does not unload regions)."""
-  with settings(hide('warnings', 'stdout', 'stderr'),
-                warn_only=True):
-    run(HBASE_HOME + "/bin/hbase-daemon.sh stop regionserver")
+  _do(HBASE_HOME + "/bin/hbase-daemon.sh stop regionserver")
 
 def hadoop_stop():
   """Start hadoop."""
-  with settings(hide('warnings', 'stdout', 'stderr'),
-                warn_only=True):
-    run(HOME_DIR + "/hadoop/bin/hadoop-daemon.sh stop datanode")
-    run(HOME_DIR + "/hadoop/bin/hadoop-daemon.sh stop tasktracker")
+  _do(HOME_DIR + "/hadoop/bin/hadoop-daemon.sh stop datanode")
+  _do(HOME_DIR + "/hadoop/bin/hadoop-daemon.sh stop tasktracker")
 
 def hadoop_start():
   """Start hadoop."""
-  with settings(hide('warnings', 'stdout', 'stderr'),
-                warn_only=True):
-    run(HOME_DIR + "/hadoop/bin/hadoop-daemon.sh start datanode")
-    run("/usr/bin/cgexec -g memory:daemons/tt -g blkio:daemons/tt --sticky " +
-        HOME_DIR + "/hadoop/bin/hadoop-daemon.sh start tasktracker")
+  _do(HOME_DIR + "/hadoop/bin/hadoop-daemon.sh start datanode")
+  _do("/usr/bin/cgexec -g memory:daemons/tt -g blkio:daemons/tt --sticky " +
+     HOME_DIR + "/hadoop/bin/hadoop-daemon.sh start tasktracker")
 
 def hbase_start():
   """Start hbase."""
-  with settings(hide('warnings', 'stdout', 'stderr'),
-                warn_only=True):
-    run(HBASE_HOME + "/bin/hbase-daemon.sh start regionserver")
+  _do(HBASE_HOME + "/bin/hbase-daemon.sh start regionserver")
 
 def jmx_kill():
   """Kill JMX collectors."""
-  with settings(hide('warnings', 'stdout', 'stderr'),
-                warn_only=True):
-    run("pkill -f com.stumbleupon.monitoring.jmx")
+  _do("pkill -f com.stumbleupon.monitoring.jmx")
 
 def thrift_stop():
   """Stop thrift."""
-  with settings(hide('warnings', 'stdout', 'stderr'),
-                warn_only=True):
-    run(HBASE_HOME + "/bin/hbase-daemon.sh stop thrift")
+  _do(HBASE_HOME + "/bin/hbase-daemon.sh stop thrift")
 
 def thrift_start():
   """Start thrift."""
-  with settings(hide('warnings', 'stdout', 'stderr'),
-                warn_only=True):
-    run(HBASE_HOME + "/bin/hbase-daemon.sh start thrift")
+  _do(HBASE_HOME + "/bin/hbase-daemon.sh start thrift")
 
 def thrift_restart():
   """Re-start thrift."""
@@ -367,6 +362,12 @@ def _hbase_gstop():
     unload_regions()
   hbase_stop()
 
+def hbase_gstop():
+  """HBase graceful stop.
+  """
+  disable_balancer()
+  _hbase_gstop()
+
 def rolling_restart():
   """Rolling restart of the whole cluster.
   Runs the following sequence: assert_configs, unload_regions, assert_regions,
@@ -404,9 +405,3 @@ def rolling_reboot():
     if (count == -1):
       abort("RS did NOT reboot/restart correctly.")
     clear_rs_from_draining()
-
-def hbase_gstop():
-  """HBase graceful stop.
-  """
-  disable_balancer()
-  _hbase_gstop()
