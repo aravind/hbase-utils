@@ -32,11 +32,11 @@ HADOOP_HOME = "/home/aravind/hadoop"
 HOME_DIR = "/home/aravind"
 FAB_DIR = os.path.dirname(env.real_fabfile)
 
-regionservers = open(HOME_DIR + "/hbase_conf/regionservers", "r").readlines()
-
-env.hosts = filter(lambda x: x.find("#") != 0,
-                   map(lambda x: string.split(x)[0].rstrip(),
-                       regionservers))
+if not env.hosts:
+  regionservers = open(HOME_DIR + "/hbase_conf/regionservers", "r").readlines()
+  env.hosts = filter(lambda x: x.find("#") != 0,
+                     map(lambda x: string.split(x)[0].rstrip(),
+                         regionservers))
 
 def _parse_release(release_str):
   prod, rel_str = release_str.split("-", 1)
