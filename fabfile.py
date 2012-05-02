@@ -31,6 +31,7 @@ HBASE_HOME = "/home/aravind/hbase"
 HADOOP_HOME = "/home/aravind/hadoop"
 HOME_DIR = "/home/aravind"
 FAB_DIR = os.path.dirname(env.real_fabfile)
+MAX_GRACEFUL_ATTEMPTS = 5
 
 if not env.hosts:
   regionservers = open(HOME_DIR + "/hbase_conf/regionservers", "r").readlines()
@@ -171,7 +172,7 @@ def clear_rs_from_draining():
 def _get_rs_from_zk():
   """Get the HBase representation of a hostname."""
   host_list = _zkop("get", root_znode + "/rs")
-  return filter(lambda x: env.host_string in x, host_list)
+  return filter(lambda x: env.host_string + "," in x, host_list)
 
 def add_rs_to_draining():
   """Put the regionserver into a draining state."""
@@ -355,11 +356,16 @@ def _hbase_gstop():
   if not assert_configs(same=True, die=False):
     sync_puppet()
     assert_configs(same=True, die=True)
-  unload_regions()
-  time.sleep(5)
-  count = region_count()
-  if (count != 0):
+  attempt = 0
+  while (attempt < MAX_GRACEFUL_ATTEMPTS):
     unload_regions()
+    attempt += 1
+    time.sleep(5)
+    if (region_count() != 0):
+      print ("Unable to drain server after %s attempt(s)" % attempt)
+    else:
+      print ("Server drained in %s attempt(s)" % attempt)
+      break
   hbase_stop()
 
 def hbase_gstop():
