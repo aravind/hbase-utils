@@ -70,6 +70,8 @@ def _get_zk_servers(eltree):
 
 eltree = xml.etree.ElementTree.parse(HOME_DIR + "/hbase_conf/hbase-site.xml")
 root_znode = _get_xml_prop("zookeeper.znode.parent", eltree)
+if root_znode == None:
+  root_znode = "/hbase"
 zk_client = FAB_DIR + "/zkclient.py " + _get_zk_servers(eltree)
 rs_port = _get_xml_prop("hbase.regionserver.info.port", eltree)
 if rs_port == None:
@@ -247,10 +249,10 @@ def sync_puppet():
 def _desired_state_check(desired_state=True, current_state=False, die=True):
   if (desired_state != current_state):
     if die:
-      abort("Server state NOT okay.")
-    print("Server state NOT okay.")
+      abort("%s state NOT okay." % env.host_string )
+    print("%s state NOT okay." % env.host_string )
   else:
-    print("Server state okay.")
+    print("%s state okay." % env.host_string )
   return desired_state == current_state
 
 def _get_rs_status_page():
@@ -279,8 +281,8 @@ def assert_release(release, rev, same=True, die=True):
   state_string = " is "
   if not same:
     state_string = " is not "
-  print("Checking that the server" + state_string + "running release: " +
-        release + ", rev: " + rev)
+  print("Checking that " + env.host_string + " " + state_string +
+        "running release: " + release + ", rev: " + rev)
   server_state = (string.find(data, release + ", r" + rev) != -1)
   return _desired_state_check(same, server_state, die)
 
@@ -290,9 +292,9 @@ def region_count():
   data = _get_rs_status_page()
   re_matches = re.search(" numberOfOnlineRegions=(\d+),", data)
   if re_matches:
-    print("Server has " + str(re_matches.group(1)) + " regions.")
+    print(env.host_string + " has " + str(re_matches.group(1)) + " regions.")
     return int(re_matches.group(1))
-  print("Could not contact server to get region count.")
+  print("Could not contact %s to get region count." % env.host_string )
   return -1
 
 def assert_regions(empty=True, die=True):
@@ -304,7 +306,7 @@ def assert_regions(empty=True, die=True):
   state_string = " is not "
   if not empty:
     state_string = " is "
-  print("Checking that the server" + state_string + "serving regions.")
+  print("Checking that " + env.host_string + " " + state_string + "serving regions.")
   server_state = (region_count() == 0)
   return _desired_state_check(empty, server_state, die)
 
@@ -324,8 +326,8 @@ def assert_configs(same=True, die=False):
   state_string = " the "
   if not same:
     state_string = " not the "
-  print("Checking that the configs on the server are" + state_string +
-        "same as those on master.")
+  print("Checking that the configs on the " + env.host_string + " are" +
+        state_string + "same as those on master.")
   current_state = server_md5 == current_md5
   return _desired_state_check(same, current_state, die)
 
@@ -340,7 +342,8 @@ def deploy_hbase(tarfile):
   release_dir = HOME_DIR + "/" + release_dir
   print("Deploying: " + prod +
         ", Version: " + version +
-        ", Build: " + revision)
+        ", Build: " + revision +
+        "on to " + env.host_string)
   dist_hbase(release_dir)
   if (assert_release(version, revision, False, die=False) or
       _get_rs_status_page() == ""):
@@ -362,9 +365,9 @@ def _hbase_gstop():
     attempt += 1
     time.sleep(5)
     if (region_count() != 0):
-      print ("Unable to drain server after %s attempt(s)" % attempt)
+      print ("Unable to drain %s after %s attempt(s)" % (env.host_string, attempt))
     else:
-      print ("Server drained in %s attempt(s)" % attempt)
+      print ("%s drained in %s attempt(s)" % (env.host_string, attempt))
       break
   hbase_stop()
 
